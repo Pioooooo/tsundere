@@ -6,19 +6,9 @@ public class Named
 {
     public virtual string Name { get; }
 
-    protected Named(string name)
-    {
-        Name = name;
-    }
+    protected Named(string name = "") => Name = name;
 
-    protected Named() : this("")
-    {
-    }
-
-    public override string ToString()
-    {
-        return Name;
-    }
+    public override string ToString() => Name;
 }
 
 public class State : Named
@@ -67,69 +57,55 @@ public class TransitionSystem
     private readonly Dictionary<State, HashSet<Transition>> _transitions = new();
     private readonly Dictionary<State, HashSet<AtomicProposition>> _label = new();
 
-    public TransitionSystem(TextReader textReader)
+    private TransitionSystem()
     {
-        Parse(textReader);
     }
 
     private List<State> InitStates => States.FindAll(state => state.Init);
 
-    public Dictionary<string, AtomicProposition> NamedProps => _atomicProps.ToDictionary(ap => ap.Name, ap => ap);
+    public Dictionary<string, AtomicProposition> PropsByString => _atomicProps.ToDictionary(ap => ap.Name, ap => ap);
 
-    private void Parse(TextReader textReader)
+    public static TransitionSystem Parse(TextReader textReader)
     {
+        var ts = new TransitionSystem();
         string[] NextStrings() => textReader.ReadLine()!.Split();
         var numbers = NextStrings();
         var nStates = int.Parse(numbers[0]);
         var nTransitions = int.Parse(numbers[1]);
         for (var i = 0; i < nStates; i++)
         {
-            States.Add(new State(i.ToString()));
-            _transitions.Add(States[i], new HashSet<Transition>());
-            _label.Add(States[i], new HashSet<AtomicProposition>());
+            ts.States.Add(new State(i.ToString()));
+            ts._transitions.Add(ts.States[i], new HashSet<Transition>());
+            ts._label.Add(ts.States[i], new HashSet<AtomicProposition>());
         }
 
         var initStates = NextStrings();
-        foreach (var initState in initStates)
-        {
-            States[int.Parse(initState)].Init = true;
-        }
+        foreach (var initState in initStates) ts.States[int.Parse(initState)].Init = true;
 
         var acts = NextStrings();
-        foreach (var act in acts)
-        {
-            _actions.Add(new Action(act));
-        }
+        foreach (var act in acts) ts._actions.Add(new Action(act));
 
         var atomicProps = NextStrings();
-        foreach (var atomicProp in atomicProps)
-        {
-            _atomicProps.Add(new AtomicProposition(atomicProp));
-        }
+        foreach (var atomicProp in atomicProps) ts._atomicProps.Add(new AtomicProposition(atomicProp));
 
         for (var i = 0; i < nTransitions; i++)
         {
             var transition = NextStrings();
-            var from = States[int.Parse(transition[0])];
-            var act = _actions[int.Parse(transition[1])];
-            var to = States[int.Parse(transition[2])];
-            _transitions[from].Add(new Transition(from, to, act));
+            var from = ts.States[int.Parse(transition[0])];
+            var act = ts._actions[int.Parse(transition[1])];
+            var to = ts.States[int.Parse(transition[2])];
+            ts._transitions[from].Add(new Transition(from, to, act));
         }
 
         for (var i = 0; i < nStates; i++)
-        {
-            var labels = NextStrings();
-            foreach (var label in labels)
-            {
-                _label[States[i]].Add(_atomicProps[int.Parse(label)]);
-            }
-        }
+            foreach (var label in NextStrings())
+                ts._label[ts.States[i]].Add(ts._atomicProps[int.Parse(label)]);
+
+        return ts;
     }
 
-    public override string ToString()
-    {
-        return $"{nameof(_transitions)}: {_transitions.DataString()}\n" +
-               $"{nameof(_label)}: {_label.DataString()}\n" +
-               $"{nameof(InitStates)}: {String.Join(", ", InitStates)}";
-    }
+    public override string ToString() =>
+        $"{nameof(_transitions)}: {_transitions.DataString()}\n" +
+        $"{nameof(_label)}: {_label.DataString()}\n" +
+        $"{nameof(InitStates)}: {InitStates.DataString()}";
 }

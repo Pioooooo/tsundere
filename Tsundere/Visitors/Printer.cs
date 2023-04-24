@@ -5,11 +5,6 @@ namespace Tsundere.Visitors;
 
 public class Printer : TsundereBaseVisitor<int>
 {
-    public override int VisitLanguage(TsundereParser.LanguageContext context)
-    {
-        return VisitChildren(context);
-    }
-
     public override int VisitExpression(TsundereParser.ExpressionContext context)
     {
         if (context.TRUE() != null)
@@ -44,15 +39,15 @@ public class Printer : TsundereBaseVisitor<int>
             return context.expression(0).Accept(this);
         }
 
-        if (context.ALWAYS() != null)
-        {
-            Write("G");
-            return context.expression(0).Accept(this);
-        }
-
         if (context.EVENTUALLY() != null)
         {
             Write("F");
+            return context.expression(0).Accept(this);
+        }
+
+        if (context.ALWAYS() != null)
+        {
+            Write("G");
             return context.expression(0).Accept(this);
         }
 
@@ -98,11 +93,8 @@ public class Printer : TsundereBaseVisitor<int>
             return res;
         }
 
-        return context.expression(0).Accept(this);
+        throw new UnreachableException();
     }
 
-    private void Write(string ln)
-    {
-        Console.Write(ln);
-    }
+    private static void Write(string ln) => Console.Write(ln);
 }

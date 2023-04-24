@@ -1,9 +1,6 @@
 ﻿using System.CommandLine;
-using Antlr4.Runtime;
 using Tsundere.LTL;
-using Tsundere.Parser;
 using Tsundere.TS;
-using Tsundere.Visitors;
 
 namespace Tsundere;
 
@@ -76,16 +73,9 @@ internal static class Program
     private static void Work(TextReader tsReader, TextReader benchReader, TextWriter writer, bool printStructure)
     {
         Console.SetOut(writer);
-        var ts = new TransitionSystem(tsReader);
-        if (printStructure)
-        {
-            Console.WriteLine(ts);
-        }
+        var ts = TransitionSystem.Parse(tsReader);
 
         var bench = new Benchmark(ts, benchReader);
-        if (printStructure)
-        {
-            Console.Write(bench);
-        }
+        if (printStructure) Console.Write(bench);
     }
 }
