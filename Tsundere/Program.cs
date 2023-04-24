@@ -1,6 +1,8 @@
 ﻿using System.CommandLine;
 using Antlr4.Runtime;
+using Tsundere.LTL;
 using Tsundere.Parser;
+using Tsundere.TS;
 using Tsundere.Visitors;
 
 namespace Tsundere;
@@ -9,22 +11,38 @@ internal static class Program
 {
     private static int Main(string[] args)
     {
-        var inputOption = new Option<TextReader?>(
-            name: "--input",
-            description: "The file to read from.",
+        var tsOption = new Option<TextReader?>(
+            name: "--ts",
+            description: "The transition system file to read from.",
             isDefault: true,
             parseArgument: result =>
             {
-                if (result.Tokens.Count == 0) return Console.In;
+                if (result.Tokens.Count == 0) return File.OpenText("TS.txt");
 
                 var filePath = result.Tokens.Single().Value;
-                if (File.Exists(filePath)) return new StreamReader(new FileStream(filePath, FileMode.Open));
+                if (File.Exists(filePath)) return File.OpenText(filePath);
 
-                result.ErrorMessage = "Input file does not exist";
+                result.ErrorMessage = "The TS file does not exist";
                 return null;
             }
         );
-        inputOption.AddAlias("-i");
+        tsOption.AddAlias("-t");
+        var benchOption = new Option<TextReader?>(
+            name: "--bench",
+            description: "The LTL formula benchmark file to read from.",
+            isDefault: true,
+            parseArgument: result =>
+            {
+                if (result.Tokens.Count == 0) return File.OpenText("benchmark.txt");
+
+                var filePath = result.Tokens.Single().Value;
+                if (File.Exists(filePath)) return File.OpenText(filePath);
+
+                result.ErrorMessage = "The benchmark file does not exist";
+                return null;
+            }
+        );
+        benchOption.AddAlias("-b");
         var outputOption = new Option<TextWriter?>(
             name: "--output",
             description: "The file to write to.",
@@ -34,7 +52,7 @@ internal static class Program
                 if (result.Tokens.Count == 0) return Console.Out;
 
                 var filePath = result.Tokens.Single().Value;
-                return new StreamWriter(new FileStream(filePath, FileMode.OpenOrCreate));
+                return File.CreateText(filePath);
             }
         );
         outputOption.AddAlias("-o");
@@ -45,27 +63,29 @@ internal static class Program
         printStructureOption.AddAlias("-s");
 
         var rootCommand = new RootCommand("Model checker written in C#.");
-        rootCommand.AddOption(inputOption);
+        rootCommand.AddOption(tsOption);
+        rootCommand.AddOption(benchOption);
         rootCommand.AddOption(outputOption);
         rootCommand.AddOption(printStructureOption);
 
-        rootCommand.SetHandler(Work!, inputOption, outputOption, printStructureOption);
+        rootCommand.SetHandler(Work!, tsOption, benchOption, outputOption, printStructureOption);
 
         return rootCommand.Invoke(args);
     }
 
-    private static void Work(TextReader reader, TextWriter writer, bool printStructure)
+    private static void Work(TextReader tsReader, TextReader benchReader, TextWriter writer, bool printStructure)
     {
-        var antlrInputStream = new AntlrInputStream(reader);
-        var tsundereLexer = new TsundereLexer(antlrInputStream);
-        var commonTokenStream = new CommonTokenStream(tsundereLexer);
-        var tsundereParser = new TsundereParser(commonTokenStream);
-
-        var context = tsundereParser.language();
+        Console.SetOut(writer);
+        var ts = new TransitionSystem(tsReader);
         if (printStructure)
         {
-            var printer = new Printer(writer);
-            printer.Visit(context);
+            Console.WriteLine(ts);
+        }
+
+        var bench = new Benchmark(ts, benchReader);
+        if (printStructure)
+        {
+            Console.Write(bench);
         }
     }
 }
