@@ -24,7 +24,7 @@ public class LtlBuilder : TsundereBaseVisitor<LtlNode>
         if (context.FALSE() != null) return LtlNode.FalseNode;
         if (context.AP() != null) return GetVar(context.AP().GetText());
         if (context.LEFT_PAREN() != null) return VisitChild();
-        if (context.NEG() != null) return VisitChild().Neg();
+        if (context.NEG() != null) return VisitChild().Neg;
         if (context.EVENTUALLY() != null) return LtlNode.Eventually(VisitChild());
         if (context.ALWAYS() != null) return LtlNode.Always(VisitChild());
         if (context.NEXT() != null) return new Next(VisitChild());
