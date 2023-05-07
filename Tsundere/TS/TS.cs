@@ -4,10 +4,8 @@ namespace Tsundere.TS;
 
 public class Named
 {
-    public virtual string Name { get; }
-
     protected Named(string name = "") => Name = name;
-
+    protected virtual string Name { get; }
     public override string ToString() => Name;
 }
 
@@ -29,15 +27,22 @@ public class Action : Named
 
 public class AtomicProposition : Named
 {
-    public AtomicProposition(string name) : base(name)
+    private static readonly Dictionary<string, AtomicProposition> StringToProps = new();
+
+    private AtomicProposition(string name) : base(name)
     {
     }
+
+    public static AtomicProposition Get(string name) =>
+        StringToProps.TryGetValue(name, out var value)
+            ? value
+            : StringToProps[name] = new AtomicProposition(name);
 }
 
 public class Transition : Named
 {
-    public readonly State From, To;
     public readonly Action Act;
+    public readonly State From, To;
 
     public Transition(State from, State to, Action act)
     {
@@ -46,24 +51,22 @@ public class Transition : Named
         Act = act;
     }
 
-    public override string Name => $"{From}->{To}:{Act}";
+    protected override string Name => $"{From}->{To}:{Act}";
 }
 
 public class TransitionSystem
 {
-    public readonly List<State> States = new();
     private readonly List<Action> _actions = new();
     private readonly List<AtomicProposition> _atomicProps = new();
-    private readonly Dictionary<State, HashSet<Transition>> _transitions = new();
     private readonly Dictionary<State, HashSet<AtomicProposition>> _label = new();
+    private readonly Dictionary<State, HashSet<Transition>> _transitions = new();
+    public readonly List<State> States = new();
 
     private TransitionSystem()
     {
     }
 
     private List<State> InitStates => States.FindAll(state => state.Init);
-
-    public Dictionary<string, AtomicProposition> PropsByString => _atomicProps.ToDictionary(ap => ap.Name, ap => ap);
 
     public static TransitionSystem Parse(TextReader textReader)
     {
@@ -86,7 +89,7 @@ public class TransitionSystem
         foreach (var act in acts) ts._actions.Add(new Action(act));
 
         var atomicProps = NextStrings();
-        foreach (var atomicProp in atomicProps) ts._atomicProps.Add(new AtomicProposition(atomicProp));
+        foreach (var atomicProp in atomicProps) ts._atomicProps.Add(AtomicProposition.Get(atomicProp));
 
         for (var i = 0; i < nTransitions; i++)
         {

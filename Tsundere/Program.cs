@@ -76,6 +76,7 @@ internal static class Program
         var ts = TransitionSystem.Parse(tsReader);
 
         var bench = new Benchmark(ts, benchReader);
-        if (printStructure) Console.Write(bench);
+        if (printStructure) Console.WriteLine(bench);
+        bench.Test(printStructure);
     }
 }
