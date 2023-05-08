@@ -37,39 +37,35 @@ public class Gnba
     protected internal Dictionary<State, HashSet<GnbaTransition>> Delta = new();
     protected internal List<HashSet<State>> F = new();
     protected internal List<State> States = new();
-    protected internal HashSet<AtomicProposition> Symbols = new();
 
     protected Gnba()
     {
     }
 
-    public static Gnba FromLtl(Ltl ltl)
+    public Gnba(Ltl ltl)
     {
-        var gnba = new Gnba();
         var halfClosure = ltl.HalfClosure;
         var dict = halfClosure
             .GroupBy(l => l is Variable)
             .ToDictionary(p => p.Key, p => p.ToFormulaSet());
         var vars = dict.Get(true);
-        gnba.Symbols = vars.Select(v => ((Variable)v).AtomicProp).ToHashSet();
-
         var rest = dict.Get(false);
         var (elementaryCover, powSet) = ElementaryCover(vars, rest);
         var varsToAlphabet = powSet
             .ToDictionary(f => f.Where(n => n is Variable).ToFormulaSet(), GnbaAction.Get);
-        gnba.Alphabet = varsToAlphabet.Values.ToList();
+        Alphabet = varsToAlphabet.Values.ToList();
 
         var stateToElementary = elementaryCover
             .ToDictionary(f => new State($"[{f.DataString()}]") { Init = ltl.IsConsistent(f) });
-        gnba.States = stateToElementary.Keys.ToList();
+        States = stateToElementary.Keys.ToList();
 
         bool Satisfies(State s, LtlNode l) => stateToElementary[s].Contains(l);
-        gnba.F = rest
+        F = rest
             .Where(r => r is Until)
-            .Select(u => gnba.States
+            .Select(u => States
                 .Where(s => !Satisfies(s, u) || Satisfies(s, u.R))
                 .ToHashSet())
-            .DefaultIfEmpty(gnba.States.ToHashSet())
+            .DefaultIfEmpty(States.ToHashSet())
             .ToList();
 
         var typedDict = rest
@@ -79,14 +75,13 @@ public class Gnba
         var until = typedDict.Get(typeof(Until));
 
 
-        gnba.Delta = gnba.States
-            .ToDictionary(s => s, s => gnba.States
+        Delta = States
+            .ToDictionary(s => s, s => States
                 .Where(n =>
                     next.All(nx => Satisfies(s, nx) == Satisfies(n, nx.C)) &&
                     until.All(u => Satisfies(s, u) == (Satisfies(s, u.R) || (Satisfies(s, u.L) && Satisfies(n, u)))))
                 .Select(n => new GnbaTransition(s, n, GnbaAction.Get(stateToElementary[s])))
                 .ToHashSet());
-        return gnba;
     }
 
     protected internal List<State> InitStates => States.FindAll(state => state.Init);
@@ -149,7 +144,7 @@ public class Nba : Gnba
                 F = new HashSet<State>(),
                 States = gnba.States
             };
-        var nba = new Nba { Alphabet = gnba.Alphabet, Symbols = gnba.Symbols };
+        var nba = new Nba { Alphabet = gnba.Alphabet };
         var stateMap = Enumerable.Range(0, n)
             .SelectMany(i => gnba.States
                 .Select(s => (k: (s, i), v: new State($"{s}[{i}]") { Init = i == 0 && s.Init })))

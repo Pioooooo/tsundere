@@ -47,20 +47,10 @@ public class Benchmark
 
     private void Test(Ltl ltl, bool print = false)
     {
-        var gnba = Gnba.FromLtl(ltl.Neg);
-        if (print) Console.WriteLine($"GNBA:\n{gnba}\n");
+        var gnba = new Gnba(ltl.Neg);
+        if (print) Console.WriteLine(gnba);
         var nba = Nba.FromGnba(gnba);
-        if (print) Console.WriteLine($"NBA:\n{nba}\n");
-        var (product, f) = _ts.Product(nba);
-        if (print)
-        {
-            Console.WriteLine($"Product:\n{product}\n");
-            Console.WriteLine($"F: {f.DataStringLh()}\n");
-        }
-
-        var (persistent, counter) = product.Persistent(f);
-        Console.WriteLine(persistent ? 1 : 0);
-        if (!persistent && print) Console.WriteLine(counter!.DataString());
+        if (print) Console.WriteLine(nba);
     }
 
     public override string ToString() =>
