@@ -37,6 +37,7 @@ public class Gnba
     protected internal Dictionary<State, HashSet<GnbaTransition>> Delta = new();
     protected internal List<HashSet<State>> F = new();
     protected internal List<State> States = new();
+    protected internal HashSet<AtomicProposition> Symbols = new();
 
     protected Gnba()
     {
@@ -49,6 +50,8 @@ public class Gnba
             .GroupBy(l => l is Variable)
             .ToDictionary(p => p.Key, p => p.ToFormulaSet());
         var vars = dict.Get(true);
+        Symbols = vars.Select(v => ((Variable)v).AtomicProp).ToHashSet();
+
         var rest = dict.Get(false);
         var (elementaryCover, powSet) = ElementaryCover(vars, rest);
         var varsToAlphabet = powSet
@@ -144,7 +147,7 @@ public class Nba : Gnba
                 F = new HashSet<State>(),
                 States = gnba.States
             };
-        var nba = new Nba { Alphabet = gnba.Alphabet };
+        var nba = new Nba { Alphabet = gnba.Alphabet, Symbols = gnba.Symbols };
         var stateMap = Enumerable.Range(0, n)
             .SelectMany(i => gnba.States
                 .Select(s => (k: (s, i), v: new State($"{s}[{i}]") { Init = i == 0 && s.Init })))

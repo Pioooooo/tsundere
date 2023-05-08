@@ -1,3 +1,4 @@
+using Tsundere.BA;
 using Tsundere.Util;
 
 namespace Tsundere.TS;
@@ -56,11 +57,11 @@ public class Transition : Named
 
 public class TransitionSystem
 {
-    private readonly List<Action> _actions = new();
-    private readonly List<AtomicProposition> _atomicProps = new();
-    private readonly Dictionary<State, HashSet<AtomicProposition>> _label = new();
-    private readonly Dictionary<State, HashSet<Transition>> _transitions = new();
-    public readonly List<State> States = new();
+    private List<Action> _actions = new();
+    private List<AtomicProposition> _atomicProps = new();
+    private Dictionary<State, HashSet<AtomicProposition>> _label = new();
+    private Dictionary<State, HashSet<Transition>> _transitions = new();
+    public List<State> States = new();
 
     private TransitionSystem()
     {
@@ -105,6 +106,39 @@ public class TransitionSystem
                 ts._label[ts.States[i]].Add(ts._atomicProps[int.Parse(label)]);
 
         return ts;
+    }
+
+    public (TransitionSystem ts, HashSet<HashSet<AtomicProposition>> f) Product(Nba nba)
+    {
+        var ts = new TransitionSystem { _actions = _actions };
+
+        var stateMap = States
+            .SelectMany(s => nba.States.Select(nbaState => (k: (s, nbaState),
+                v: new State($"{s}***{nbaState}")
+                {
+                    Init = s.Init && nba.InitStates.Any(i =>
+                        nba.Delta[i].Any(t => t.To == nbaState && t.Act.AtomicProps.SetEquals(_label[s].Intersect(nba.Symbols))))
+                })))
+            .ToDictionary(p => p.k, p => p.v);
+        ts.States = stateMap.Values.ToList();
+
+        ts._transitions = _transitions
+            .SelectMany(p => nba.Delta.Select(nbaP =>
+            (
+                k: stateMap[(p.Key, nbaP.Key)],
+                v: p.Value
+                    .SelectMany(t => nbaP.Value
+                        .Where(d => d.Act.AtomicProps.SetEquals(_label[t.To].Intersect(nba.Symbols)))
+                        .Select(d => new Transition(stateMap[(t.From, d.From)], stateMap[(t.To, d.To)], t.Act)))
+                    .ToHashSet()
+            ))).ToDictionary(p => p.k, p => p.v);
+
+        var nbaStateToAp = nba.States.ToDictionary(s => s, s => AtomicProposition.Get(s.ToString()));
+        ts._atomicProps = nbaStateToAp.Values.ToList();
+
+        ts._label = stateMap.ToDictionary(p => p.Value,
+            p => new HashSet<AtomicProposition> { nbaStateToAp[p.Key.nbaState] });
+        return (ts, nba.F.Select(s => new HashSet<AtomicProposition> { nbaStateToAp[s] }).ToHashSet());
     }
 
     public override string ToString() =>

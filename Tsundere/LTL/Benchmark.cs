@@ -48,9 +48,15 @@ public class Benchmark
     private void Test(Ltl ltl, bool print = false)
     {
         var gnba = new Gnba(ltl.Neg);
-        if (print) Console.WriteLine(gnba);
+        if (print) Console.WriteLine($"GNBA:\n{gnba}\n");
         var nba = Nba.FromGnba(gnba);
-        if (print) Console.WriteLine(nba);
+        if (print) Console.WriteLine($"NBA:\n{nba}\n");
+        var (product, f) = _ts.Product(nba);
+        if (print)
+        {
+            Console.WriteLine($"Product:\n{product}\n");
+            Console.WriteLine($"F: {f.DataString()}\n");
+        }
     }
 
     public override string ToString() =>
