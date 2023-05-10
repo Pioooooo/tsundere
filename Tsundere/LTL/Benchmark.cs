@@ -55,8 +55,12 @@ public class Benchmark
         if (print)
         {
             Console.WriteLine($"Product:\n{product}\n");
-            Console.WriteLine($"F: {f.DataString()}\n");
+            Console.WriteLine($"F: {f.DataStringLh()}\n");
         }
+
+        var (persistent, counter) = product.Persistent(f);
+        Console.WriteLine(persistent ? 1 : 0);
+        if (!persistent && print) Console.WriteLine(counter!.DataString());
     }
 
     public override string ToString() =>

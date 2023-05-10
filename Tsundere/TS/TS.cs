@@ -117,7 +117,8 @@ public class TransitionSystem
                 v: new State($"{s}***{nbaState}")
                 {
                     Init = s.Init && nba.InitStates.Any(i =>
-                        nba.Delta[i].Any(t => t.To == nbaState && t.Act.AtomicProps.SetEquals(_label[s].Intersect(nba.Symbols))))
+                        nba.Delta[i].Any(t =>
+                            t.To == nbaState && t.Act.AtomicProps.SetEquals(_label[s].Intersect(nba.Symbols))))
                 })))
             .ToDictionary(p => p.k, p => p.v);
         ts.States = stateMap.Values.ToList();
@@ -141,8 +142,76 @@ public class TransitionSystem
         return (ts, nba.F.Select(s => new HashSet<AtomicProposition> { nbaStateToAp[s] }).ToHashSet());
     }
 
+    public (bool persistent, List<State>? counter) Persistent(HashSet<HashSet<AtomicProposition>> f)
+    {
+        var i = InitStates.ToHashSet();
+        var r = new HashSet<State>();
+        var u = new Stack<State>();
+        var t = new HashSet<State>();
+        var v = new Stack<State>();
+        var cycleFound = false;
+
+        void CycleCheck(State s)
+        {
+            v.Push(s);
+            t.Add(s);
+            do
+            {
+                var cur = v.Peek();
+                var post = _transitions[cur].Select(trans => trans.To).ToHashSet();
+                if (post.Contains(s))
+                {
+                    cycleFound = true;
+                    v.Push(s);
+                }
+                else
+                {
+                    post.RemoveWhere(p => t.Contains(p));
+                    if (post.Any())
+                    {
+                        var next = post.First();
+                        v.Push(next);
+                        t.Add(next);
+                    }
+                    else
+                    {
+                        v.Pop();
+                    }
+                }
+            } while (v.Any() && !cycleFound);
+        }
+
+        void ReachableCycle(State s)
+        {
+            u.Push(s);
+            r.Add(s);
+            i.Remove(s);
+            do
+            {
+                var cur = u.Peek();
+                var post = _transitions[cur].Select(trans => trans.To).Except(r).ToList();
+                if (post.Any())
+                {
+                    var next = post.First();
+                    u.Push(next);
+                    r.Add(next);
+                    i.Remove(next);
+                }
+                else
+                {
+                    u.Pop();
+                    if (f.Any(l => l.SetEquals(_label[cur]))) CycleCheck(cur);
+                }
+            } while (u.Any() && !cycleFound);
+        }
+
+        while (i.Any() && !cycleFound) ReachableCycle(i.First());
+
+        return (!cycleFound, cycleFound ? u.Reverse().Concat(v.Reverse()).ToList() : null);
+    }
+
     public override string ToString() =>
-        $"{nameof(_transitions)}: {_transitions.DataString()}\n" +
+        $"{nameof(_transitions)}: {_transitions.DataString("\n")}\n" +
         $"{nameof(_label)}: {_label.DataString()}\n" +
         $"{nameof(InitStates)}: {InitStates.DataString()}";
 }
