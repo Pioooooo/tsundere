@@ -69,43 +69,55 @@ public class TransitionSystem
 
     private List<State> InitStates => States.FindAll(state => state.Init);
 
-    public static TransitionSystem Parse(TextReader textReader)
+    public static bool Parse(TextReader textReader, out TransitionSystem ts)
     {
-        var ts = new TransitionSystem();
-        string[] NextStrings() => textReader.ReadLine()!.Split();
-        var numbers = NextStrings();
-        var nStates = int.Parse(numbers[0]);
-        var nTransitions = int.Parse(numbers[1]);
-        for (var i = 0; i < nStates; i++)
+        try
         {
-            ts.States.Add(new State(i.ToString()));
-            ts._transitions.Add(ts.States[i], new HashSet<Transition>());
-            ts._label.Add(ts.States[i], new HashSet<AtomicProposition>());
+            ts = new TransitionSystem();
+
+            string[] NextStrings() =>
+                textReader.ReadLine()!.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+
+            var numbers = NextStrings();
+            var nStates = int.Parse(numbers[0]);
+            var nTransitions = int.Parse(numbers[1]);
+            for (var i = 0; i < nStates; i++)
+            {
+                ts.States.Add(new State(i.ToString()));
+                ts._transitions.Add(ts.States[i], new HashSet<Transition>());
+                ts._label.Add(ts.States[i], new HashSet<AtomicProposition>());
+            }
+
+            var initStates = NextStrings();
+            foreach (var initState in initStates) ts.States[int.Parse(initState)].Init = true;
+
+            var acts = NextStrings();
+            foreach (var act in acts) ts._actions.Add(new Action(act));
+
+            var atomicProps = NextStrings();
+            foreach (var atomicProp in atomicProps) ts._atomicProps.Add(AtomicProposition.Get(atomicProp));
+
+            for (var i = 0; i < nTransitions; i++)
+            {
+                var transition = NextStrings();
+                var from = ts.States[int.Parse(transition[0])];
+                var act = ts._actions[int.Parse(transition[1])];
+                var to = ts.States[int.Parse(transition[2])];
+                ts._transitions[from].Add(new Transition(from, to, act));
+            }
+
+            for (var i = 0; i < nStates; i++)
+                foreach (var label in NextStrings())
+                    ts._label[ts.States[i]].Add(ts._atomicProps[int.Parse(label)]);
+
+            return true;
         }
-
-        var initStates = NextStrings();
-        foreach (var initState in initStates) ts.States[int.Parse(initState)].Init = true;
-
-        var acts = NextStrings();
-        foreach (var act in acts) ts._actions.Add(new Action(act));
-
-        var atomicProps = NextStrings();
-        foreach (var atomicProp in atomicProps) ts._atomicProps.Add(AtomicProposition.Get(atomicProp));
-
-        for (var i = 0; i < nTransitions; i++)
+        catch (Exception)
         {
-            var transition = NextStrings();
-            var from = ts.States[int.Parse(transition[0])];
-            var act = ts._actions[int.Parse(transition[1])];
-            var to = ts.States[int.Parse(transition[2])];
-            ts._transitions[from].Add(new Transition(from, to, act));
+            Console.WriteLine("Bad Input. Check your TS.");
+            ts = null!;
+            return false;
         }
-
-        for (var i = 0; i < nStates; i++)
-            foreach (var label in NextStrings())
-                ts._label[ts.States[i]].Add(ts._atomicProps[int.Parse(label)]);
-
-        return ts;
     }
 
     public (TransitionSystem ts, HashSet<HashSet<AtomicProposition>> f) Product(Nba nba)

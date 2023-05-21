@@ -10,25 +10,33 @@ public class Benchmark
     private readonly List<(State s, Ltl ltl)> _locals = new();
     private readonly TransitionSystem _ts;
 
-    public Benchmark(TransitionSystem ts, TextReader textReader)
-    {
-        _ts = ts;
-        Parse(textReader);
-    }
+    private Benchmark(TransitionSystem ts) => _ts = ts;
 
     private List<State> States => _ts.States;
 
-    private void Parse(TextReader textReader)
+    public static bool Parse(TransitionSystem ts, TextReader textReader, out Benchmark benchmark)
     {
-        var numbers = textReader.ReadLine()!.Split();
-        var nGlobal = int.Parse(numbers[0]);
-        var nLocal = int.Parse(numbers[1]);
-        for (var i = 0; i < nGlobal; i++) _globals.Add(Ltl.Parse(textReader.ReadLine()!));
-
-        for (var i = 0; i < nLocal; i++)
+        try
         {
-            var strings = textReader.ReadLine()!.Split(null, 2);
-            _locals.Add((States[int.Parse(strings[0])], Ltl.Parse(strings[1])));
+            benchmark = new Benchmark(ts);
+            var numbers = textReader.ReadLine()!.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+            var nGlobal = int.Parse(numbers[0]);
+            var nLocal = int.Parse(numbers[1]);
+            for (var i = 0; i < nGlobal; i++) benchmark._globals.Add(Ltl.Parse(textReader.ReadLine()!));
+
+            for (var i = 0; i < nLocal; i++)
+            {
+                var strings = textReader.ReadLine()!.Split((char[]?)null, 2, StringSplitOptions.RemoveEmptyEntries);
+                benchmark._locals.Add((benchmark.States[int.Parse(strings[0])], Ltl.Parse(strings[1])));
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            Console.WriteLine("Bad Input. Check your benchmark.");
+            benchmark = null!;
+            return false;
         }
     }
 

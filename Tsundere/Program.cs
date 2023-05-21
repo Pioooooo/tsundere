@@ -74,9 +74,8 @@ internal static class Program
         var benchReader = File.OpenText(benchPath);
         var writer = writerPath == "stdout" ? Console.Out : File.CreateText(writerPath[1..]);
         Console.SetOut(writer);
-        var ts = TransitionSystem.Parse(tsReader);
-
-        var bench = new Benchmark(ts, benchReader);
+        if (!TransitionSystem.Parse(tsReader, out var ts)) return;
+        if (!Benchmark.Parse(ts, benchReader, out var bench)) return;
         if (printStructure) Console.WriteLine(bench);
         bench.Test(printStructure);
     }
