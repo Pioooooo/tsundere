@@ -7,7 +7,7 @@ CS3959 assignment, ACM Class, SJTU
 # Build
 
 1. Install [.NET](https://dotnet.microsoft.com/download)
-2. `cd Tsundere && dotnet build`
+2. `cd Tsundere && dotnet publish -c Release -r <RID> --self-contained false -p:PublishReadyToRun=true`
 
 # Usage
 
